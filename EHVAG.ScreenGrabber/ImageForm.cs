@@ -75,20 +75,16 @@ namespace EHVAG.ScreenGrabber
 			if (!IsSelecting)
 				return;
 
-			var size = new Size(e.Location.X - Selection.Location.X, e.Location.Y - Selection.Location.Y);
-			Selection.Size = size;
+			Point2 = e.Location;
 
-			if (Selection.Width < 0)
-			{
-				Selection.X += Selection.Width;
-				Selection.Width = -Selection.Width;
-			}
+			var left = Math.Min(Point1.X, Point2.X);
+			var right = Math.Max(Point1.X, Point2.X);
 
-			if (Selection.Height < 0)
-			{
-				Selection.Y += Selection.Height;
-				Selection.Height = -Selection.Height;
-			}
+			var top = Math.Min(Point1.Y, Point2.Y);
+			var bottom = Math.Max(Point1.Y, Point2.Y);
+
+			Selection = new Rectangle(left, top, right - left, bottom - top);
+
 			GenerateOverlayImage();
 		}
 
