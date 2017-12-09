@@ -13,10 +13,16 @@ namespace EHVAG.ScreenGrabber
 
 			ImageForm form;
 
+			string fullScreenTool = null;
+			if (args.Length > 0 && args[0] == "--i3")
+			{
+				fullScreenTool = "i3-msg";
+			}
+
 			if (args.Length > 0 && args[0] == "--sway")
 				form = new SwayForm();
 			else
-				form = new ImageForm();
+				form = new ImageForm(fullScreenTool);
 
 			Application.Run(form);
 		}

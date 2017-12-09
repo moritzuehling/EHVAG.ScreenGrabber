@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using System.Drawing;
 using System.Linq;
+using System.Diagnostics;
 
 namespace EHVAG.ScreenGrabber
 {
@@ -25,15 +26,21 @@ namespace EHVAG.ScreenGrabber
 
 		Button UploadButton = new Button();
 
-		public ImageForm() : this(true)
+		string FullscreenTool;
+
+		public ImageForm(string fullscreenTool) : this(true, fullscreenTool)
 		{
 			Initialize();
 		}
 
-		protected ImageForm(bool captureScreenshot) 
+		protected ImageForm(bool captureScreenshot, string fullscreenTool) 
 		{
 			if (captureScreenshot)
 				CaptureScreenshot();
+
+			OldSelection = new Rectangle(Point.Empty, CapturedImage.Size);
+
+			FullscreenTool = fullscreenTool;
 		}
 
 		protected void Initialize()
@@ -62,6 +69,18 @@ namespace EHVAG.ScreenGrabber
 			this.UploadButton.KeyDown += Handle_KeyDown;
 
 			this.ImageContainer.Controls.Add(this.UploadButton);
+
+			this.Load += Handle_Load;
+
+			GenerateOverlayImage();
+		}
+
+		void Handle_Load(object sender, EventArgs e)
+		{
+			if (FullscreenTool != null)
+			{
+				Process.Start(FullscreenTool, "[title=\"^EHVAG_GLOBAL$\"] fullscreen global");
+			}
 		}
 
 		private void CaptureScreenshot()

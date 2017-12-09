@@ -12,12 +12,10 @@ namespace EHVAG.ScreenGrabber
 	{
 		Dictionary<string, Rectangle> SwayScreens = new Dictionary<string, Rectangle>();
 
-		public SwayForm() : base(false)
+		public SwayForm() : base(false, "swaymsg")
 		{
 			GenerateSwayScreens();
 			CaptureScreenshot();
-
-			CapturedImage.Save("lol.png", ImageFormat.Png);
 
 			Initialize();
 		}
