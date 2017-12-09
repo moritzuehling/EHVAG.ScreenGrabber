@@ -19,6 +19,9 @@ namespace EHVAG.ScreenGrabber
 			CaptureScreenTo();
 
 			Initialize();
+
+			this.Shown -= MakeFullscreen;
+			this.Resize += MakeFullscreen;
 		}
 
 		public void CaptureScreenTo()

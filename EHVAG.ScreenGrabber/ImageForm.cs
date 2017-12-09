@@ -29,6 +29,8 @@ namespace EHVAG.ScreenGrabber
 		string FullscreenTool;
 		string FullscreenToolArgs;
 
+		bool WasResized = false;
+
 		public ImageForm(string fullscreenTool, string fullscreenToolArgs) : this(true, fullscreenTool, fullscreenToolArgs)
 		{
 			Initialize();
@@ -70,16 +72,15 @@ namespace EHVAG.ScreenGrabber
 
 			this.ImageContainer.Controls.Add(this.UploadButton);
 
-			this.Shown += Handle_Load;
-
 			OldSelection = new Rectangle(Point.Empty, CapturedImage.Size);
 			GenerateOverlayImage();
 		}
 
-		void Handle_Load(object sender, EventArgs e)
+		public void MakeFullscreen(object sender, EventArgs e)
 		{
-			if (FullscreenTool != null)
+			if (FullscreenTool != null && !WasResized)
 			{
+				WasResized = true;
 				Process.Start(FullscreenTool, FullscreenToolArgs);
 			}
 		}
