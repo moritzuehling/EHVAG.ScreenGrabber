@@ -20,7 +20,6 @@ namespace EHVAG.ScreenGrabber
 			CapturedImage.Save("lol.png", ImageFormat.Png);
 
 			Initialize();
-			Text = "LOL";
 		}
 
 		public void CaptureScreenshot()
