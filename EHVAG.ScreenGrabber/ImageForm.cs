@@ -7,7 +7,7 @@ namespace EHVAG.ScreenGrabber
 {
 	public class ImageForm : Form
 	{
-		Bitmap CapturedImage;
+		protected Bitmap CapturedImage;
 		Bitmap OverlayImage;
 		Graphics OverlayGraphics;
 
@@ -25,27 +25,30 @@ namespace EHVAG.ScreenGrabber
 
 		Button UploadButton = new Button();
 
-
-		public ImageForm() 
+		public ImageForm() : this(true)
 		{
-			this.KeyDown += Handle_KeyDown;
+			Initialize();
+		}
 
-			Text = "EHVAG_GLOBAL";
+		protected ImageForm(bool captureScreenshot) 
+		{
+			if (captureScreenshot)
+				CaptureScreenshot();
+		}
+
+		protected void Initialize()
+		{
+			this.Text = "EHVAG_GLOBAL";
+
+			this.KeyDown += Handle_KeyDown;
 
 			this.WindowState = FormWindowState.Normal;
 			this.FormBorderStyle = FormBorderStyle.None;
 			this.WindowState = FormWindowState.Maximized;
-			this.Bounds = GetCompleteBounds();
 
-			CapturedImage = new Bitmap(Bounds.Width, Bounds.Height);
-			OverlayImage = new Bitmap(Bounds.Width, Bounds.Height);
+			OverlayImage = new Bitmap(CapturedImage.Width, CapturedImage.Height);
 			OverlayGraphics = Graphics.FromImage(OverlayImage);
-			OldSelection = new Rectangle(0, 0, Bounds.Width, Bounds.Height);
-
-			using (var g = Graphics.FromImage(CapturedImage))
-			{
-				g.CopyFromScreen(this.Bounds.Location, Point.Empty, this.Bounds.Size);
-			}
+			OldSelection = new Rectangle(0, 0, CapturedImage.Width, CapturedImage.Height);
 
 			ImageContainer.Dock = DockStyle.Fill;
 			this.Controls.Add(ImageContainer);
@@ -59,8 +62,18 @@ namespace EHVAG.ScreenGrabber
 			this.UploadButton.KeyDown += Handle_KeyDown;
 
 			this.ImageContainer.Controls.Add(this.UploadButton);
+		}
 
-			GenerateOverlayImage();
+		private void CaptureScreenshot()
+		{
+			this.Bounds = GetCompleteBounds();
+
+			CapturedImage = new Bitmap(Bounds.Width, Bounds.Height);
+
+			using (var g = Graphics.FromImage(CapturedImage))
+			{
+				g.CopyFromScreen(Bounds.Location, Point.Empty, this.Bounds.Size);
+			}
 		}
 
 		void Handle_KeyDown(object sender, KeyEventArgs e)
@@ -137,13 +150,12 @@ namespace EHVAG.ScreenGrabber
 			this.ImageContainer.Image = OverlayImage;
 		}
 
-		public Rectangle GetCompleteBounds()
+		private Rectangle GetCompleteBounds()
 		{
 			int top = int.MaxValue;
 			int left = int.MaxValue;
 			int right = int.MinValue;
 			int bottom = int.MinValue;
-
 
 			int i = 0;
 			foreach (var screen in Screen.AllScreens)
