@@ -70,7 +70,7 @@ namespace EHVAG.ScreenGrabber
 
 			this.ImageContainer.Controls.Add(this.UploadButton);
 
-			this.Load += Handle_Load;
+			this.Shown += Handle_Load;
 
 			OldSelection = new Rectangle(Point.Empty, CapturedImage.Size);
 			GenerateOverlayImage();

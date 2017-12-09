@@ -33,7 +33,7 @@ namespace EHVAG.ScreenGrabber
 			// (2) doesn't need anything, but the detection which screen we're at is
 			//     kinda hacky. We selected it anyway for now.
 
-			var screenDump = GetStdOutOfAsByte("swaygrab", "--raw --focused");
+			var screenDump = GetStdOutOfAsByte("swaygrab", "--raw");
 
 			var targetSize = screenDump.Length / 4;
 
