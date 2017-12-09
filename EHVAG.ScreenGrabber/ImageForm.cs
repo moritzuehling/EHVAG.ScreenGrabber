@@ -72,6 +72,8 @@ namespace EHVAG.ScreenGrabber
 
 			this.ImageContainer.Controls.Add(this.UploadButton);
 
+			this.Shown += MakeFullscreen;
+
 			OldSelection = new Rectangle(Point.Empty, CapturedImage.Size);
 			GenerateOverlayImage();
 		}
