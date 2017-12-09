@@ -27,20 +27,20 @@ namespace EHVAG.ScreenGrabber
 		Button UploadButton = new Button();
 
 		string FullscreenTool;
+		string FullscreenToolArgs;
 
-		public ImageForm(string fullscreenTool) : this(true, fullscreenTool)
+		public ImageForm(string fullscreenTool, string fullscreenToolArgs) : this(true, fullscreenTool, fullscreenToolArgs)
 		{
 			Initialize();
 		}
 
-		protected ImageForm(bool captureScreenshot, string fullscreenTool) 
+		protected ImageForm(bool captureScreenshot, string fullscreenTool, string fullscreenToolArgs) 
 		{
 			if (captureScreenshot)
 				CaptureScreenshot();
 
-			OldSelection = new Rectangle(Point.Empty, CapturedImage.Size);
-
 			FullscreenTool = fullscreenTool;
+			FullscreenToolArgs = fullscreenToolArgs;
 		}
 
 		protected void Initialize()
@@ -72,6 +72,7 @@ namespace EHVAG.ScreenGrabber
 
 			this.Load += Handle_Load;
 
+			OldSelection = new Rectangle(Point.Empty, CapturedImage.Size);
 			GenerateOverlayImage();
 		}
 
@@ -79,7 +80,7 @@ namespace EHVAG.ScreenGrabber
 		{
 			if (FullscreenTool != null)
 			{
-				Process.Start(FullscreenTool, "[title=\"^EHVAG_GLOBAL$\"] fullscreen global");
+				Process.Start(FullscreenTool, FullscreenToolArgs);
 			}
 		}
 

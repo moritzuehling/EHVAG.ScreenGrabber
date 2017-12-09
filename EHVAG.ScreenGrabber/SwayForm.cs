@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace EHVAG.ScreenGrabber
 {
@@ -12,34 +13,49 @@ namespace EHVAG.ScreenGrabber
 	{
 		Dictionary<string, Rectangle> SwayScreens = new Dictionary<string, Rectangle>();
 
-		public SwayForm() : base(false, "swaymsg")
+		public SwayForm() : base(false, "swaymsg", "[title=\"^EHVAG_GLOBAL$\"] fullscreen")
 		{
 			GenerateSwayScreens();
-			CaptureScreenshot();
+			CaptureScreenTo();
 
 			Initialize();
 		}
 
-		public void CaptureScreenshot()
+		public void CaptureScreenTo()
 		{
-			this.Bounds = GetCompleteBounds();
+			// Sway doesn't support global fullscreen (which is kinda dumb, tbh)
+			// So we could either
+			// (1) create a window for every output, and move stuff there
+			// (2) simply only support capturing the active screen
+			// 
+			// (1) is harder to develop, and would need a lot of logic to handle
+			//     the mouse crossing window borders etc, and would be ver specific
+			// (2) doesn't need anything, but the detection which screen we're at is
+			//     kinda hacky. We selected it anyway for now.
+
+			var screenDump = GetStdOutOfAsByte("swaygrab", "--raw --focused");
+
+			var targetSize = screenDump.Length / 4;
+
+			var screenRect = SwayScreens.Values.FirstOrDefault(a => a.Width * a.Height == targetSize);
+
+			if (screenRect.IsEmpty)
+			{
+				Console.WriteLine("Could not find screen. Aborting.");
+				Environment.Exit(1);
+			}
+
+			this.Bounds = screenRect;
+
+			screenRect.X = 0;
+			screenRect.Y = 0;
 
 			CapturedImage = new Bitmap(Bounds.Width, Bounds.Height);
-
-			foreach (var screenName in SwayScreens.Keys)
-				CaptureScreenTo(screenName, CapturedImage);
-
-		}
-
-		public void CaptureScreenTo(string screenName, Bitmap target)
-		{
-			var screenDump = GetStdOutOfAsByte("swaygrab", "--raw --output " + screenName);
-			var screenRect = SwayScreens[screenName];
 
 			unsafe
 			{
 				byte[] row = new byte[4 * screenRect.Width];
-				var bits = target.LockBits(screenRect, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+				var bits = CapturedImage.LockBits(screenRect, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 				var scan0 = (byte*)bits.Scan0;
 
 				var h = screenRect.Height;
@@ -62,10 +78,8 @@ namespace EHVAG.ScreenGrabber
 					}
 				}
 
-				target.UnlockBits(bits);
+				CapturedImage.UnlockBits(bits);
 			}
-
-			var screenSize = SwayScreens[screenName];
 		}
 
 		private void GenerateSwayScreens()
@@ -78,6 +92,12 @@ namespace EHVAG.ScreenGrabber
 			{
 				var rect = screen["rect"];
 				var srect = new Rectangle(rect["x"].Value<int>(), rect["y"].Value<int>(), rect["width"].Value<int>(), rect["height"].Value<int>());
+
+				// Because sway doesn't support
+				// [title="^EHVAG_GLOBAL$"] fullscreen toggle global
+				// or anything similar, we can only capture the active
+				// screen, and that's where we're also fullscreen'd.
+
 				SwayScreens[screen["name"].Value<string>()] = srect;
 			}
 		}
