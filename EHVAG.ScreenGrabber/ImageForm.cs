@@ -9,7 +9,14 @@ namespace EHVAG.ScreenGrabber
 	{
 		Bitmap CapturedImage;
 		Bitmap OverlayImage;
+		Graphics OverlayGraphics;
 
+		SolidBrush BlackBrush = new SolidBrush(Color.FromArgb(40, Color.Black));
+		SolidBrush WhiteBrush = new SolidBrush(Color.FromArgb(128, Color.White));
+		Pen RedPen = new Pen(new SolidBrush(Color.Red), 1);
+
+		Point Point1;
+		Point Point2;
 		Rectangle Selection = new Rectangle(0, 0, 0, 0);
 		Rectangle OldSelection = new Rectangle(0, 0, 0, 0);
 		bool IsSelecting = false;
@@ -17,6 +24,7 @@ namespace EHVAG.ScreenGrabber
 		PictureBox ImageContainer = new PictureBox();
 
 		Button UploadButton = new Button();
+
 
 		public ImageForm() 
 		{
@@ -31,6 +39,7 @@ namespace EHVAG.ScreenGrabber
 
 			CapturedImage = new Bitmap(Bounds.Width, Bounds.Height);
 			OverlayImage = new Bitmap(Bounds.Width, Bounds.Height);
+			OverlayGraphics = Graphics.FromImage(OverlayImage);
 			OldSelection = new Rectangle(0, 0, Bounds.Width, Bounds.Height);
 
 			using (var g = Graphics.FromImage(CapturedImage))
@@ -64,6 +73,8 @@ namespace EHVAG.ScreenGrabber
 		{
 			Selection.Location = e.Location;
 			Selection.Size = Size.Empty;
+			Point1 = e.Location;
+
 			IsSelecting = true;
 			this.UploadButton.Hide();
 
@@ -106,24 +117,19 @@ namespace EHVAG.ScreenGrabber
 
 		public void GenerateOverlayImage()
 		{
-			using (var g = Graphics.FromImage(OverlayImage))
 			using (var transparentBrush = new SolidBrush(Color.FromArgb(255, Color.Black)))
-			using (var blackBrush = new SolidBrush(Color.FromArgb(40, Color.Black)))
-			using (var whiteBrush = new SolidBrush(Color.FromArgb(128, Color.White)))
-			using (var redBrush = new SolidBrush(Color.Red))
-			using (var redPen = new Pen(redBrush, 1))
 			{
 				if (OldSelection.Width != 0 && OldSelection.Height != 0)
 				{
-					g.DrawImage(CapturedImage, OldSelection, OldSelection, GraphicsUnit.Pixel);
-				 	g.FillRectangle(blackBrush, OldSelection);
-				 	g.FillRectangle(whiteBrush, OldSelection);
+					OverlayGraphics.DrawImage(CapturedImage, OldSelection, OldSelection, GraphicsUnit.Pixel);
+				 	OverlayGraphics.FillRectangle(BlackBrush, OldSelection);
+				 	OverlayGraphics.FillRectangle(WhiteBrush, OldSelection);
 				}
 
 				if (Selection.Width != 0 && Selection.Height != 0)
 				{
-					g.DrawImage(CapturedImage, Selection, Selection, GraphicsUnit.Pixel);
-					g.DrawRectangle(redPen, Selection.Left, Selection.Top, Selection.Width - 1, Selection.Height - 1);
+					OverlayGraphics.DrawImage(CapturedImage, Selection, Selection, GraphicsUnit.Pixel);
+					OverlayGraphics.DrawRectangle(RedPen, Selection.Left, Selection.Top, Selection.Width - 1, Selection.Height - 1);
 				}
 			}
 
