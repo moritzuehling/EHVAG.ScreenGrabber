@@ -11,6 +11,8 @@ namespace EHVAG.ScreenGrabber
 		public int MaxPngSize { get; set; }
 		public Dictionary<string, string> CustomRequestHeaders { get; set; }
 		public ResponseInformation ResponseInformation { get; set; }
+		public string ClientCertificate { get; set; }
+		public bool IgnoreSSLErrors { get; set; }
 	}
 
 	public class ResponseInformation

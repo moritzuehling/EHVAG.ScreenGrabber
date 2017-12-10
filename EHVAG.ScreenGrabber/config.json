@@ -12,5 +12,22 @@
 			"Link": "data.link",
 		},
 		MaxPngSize: 3145728,
+	},
+	{
+		Name: "Mumble",
+		Url: "https://localhost/api/User/List",
+		BodyFormatInfo: "raw",
+		ResponseInformation: {
+			"Type": "json",
+			"DeleteUrl": "data.deletehash",
+			"Link": "data.link",
+		},
+		MaxPngSize: 3145728,
+		IgnoreSSLErrors: true,
+		ClientCertificate: "/home/moritz/.ssh/mumble.p12",
+	},
+	{
+		Name: "Clipboard",
+		Url: "clipboard",
 	}
 ]

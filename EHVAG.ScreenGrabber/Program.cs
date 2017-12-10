@@ -24,16 +24,18 @@ namespace EHVAG.ScreenGrabber
 
 			Config = Newtonsoft.Json.JsonConvert.DeserializeObject<ConfigEntry[]>(configFileText);
 
+			var wm = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
+
 			ImageForm form;
 
 			string fullScreenTool = null, fullScreenToolArgs = null;
-			if (args.Length > 1 && args[1] == "--i3")
+			if (wm == "i3")
 			{
 				fullScreenTool = "i3-msg";
 				fullScreenToolArgs = "[title=\"^EHVAG_GLOBAL$\"] fullscreen global";
 			}
 
-			if (args.Length > 1 && args[1] == "--sway")
+			if (wm == "sway")
 				form = new SwayForm();
 			else
 				form = new ImageForm(fullScreenTool, fullScreenToolArgs);

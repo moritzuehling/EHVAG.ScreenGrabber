@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Collections.Generic;
 using System.Globalization;
 using Newtonsoft.Json.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 namespace EHVAG.ScreenGrabber
 {
@@ -17,13 +18,63 @@ namespace EHVAG.ScreenGrabber
 		public string DeleteUrl { get; set; }
 	}
 
+	public class ImageUploadStatus
+	{
+		public ConfigEntry Config { get; set; }
+		public string Status { get; set; }
+		public ImageUploadResult Result { get; set; }
+	}
+
 	public class ImageUpload
 	{
+		public static readonly List<ImageUploadStatus> UploadProgress = new List<ImageUploadStatus>();
+
 		public static async Task<ImageUploadResult> Upload(Bitmap bmp, ConfigEntry configEntry)
 		{
+			if (configEntry.Url == "clipboard")
+			{
+				MultiPlatformClipboard.SetBitmap(bmp);
+
+				return new ImageUploadResult()
+				{
+					Link = "clipboard://",
+					DeleteUrl = "lol,ctrl+c"
+				};
+			}
+
+			var status = new ImageUploadStatus()
+			{
+				Config = configEntry,
+				Status = "Preparing",
+				Result = null,
+			};
+			UploadProgress.Add(status);
+
 			var toSend = GetImage(bmp, configEntry);
 
-			using (var http = new HttpClient())
+			var handler = new WebRequestHandler();
+			if (!string.IsNullOrEmpty(configEntry.ClientCertificate))
+			{
+				var cert = X509Certificate.CreateFromCertFile(configEntry.ClientCertificate);
+				handler.ClientCertificates.Add(cert);
+			}
+
+			if (configEntry.IgnoreSSLErrors)
+			{
+				System.Net.ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) =>
+				{
+					Console.WriteLine("Validating 2");
+					return true;
+				};
+
+				handler.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) =>
+				{
+					Console.WriteLine("Validating.");
+					return true;
+				};
+			}
+
+			using (var http = new HttpClient(handler))
 			{
 				HttpRequestMessage msg = new HttpRequestMessage(HttpMethod.Post, configEntry.Url);
 				if (configEntry.CustomRequestHeaders != null)
@@ -34,11 +85,23 @@ namespace EHVAG.ScreenGrabber
 
 				msg.Content = GetContent(toSend, configEntry);
 
-				var response = await http.SendAsync(msg);
+				HttpResponseMessage response;
+				try
+				{
+					response = await http.SendAsync(msg);
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine("Error while uploading: ");
+					Console.WriteLine(e);
+
+					return null;
+				}
 
 				var res = await response.Content.ReadAsStringAsync();
 
-				return GetInformation(res, configEntry);
+				status.Result = GetInformation(res, configEntry);
+				return status.Result;
 			}
 		}
 

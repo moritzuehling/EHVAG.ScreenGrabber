@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Diagnostics;
 using System.IO;
+using System.Collections.Generic;
 
 namespace EHVAG.ScreenGrabber
 {
@@ -25,14 +26,14 @@ namespace EHVAG.ScreenGrabber
 
 		PictureBox ImageContainer = new PictureBox();
 
-		Button UploadButton = new Button();
-
 		string FullscreenTool;
 		string FullscreenToolArgs;
 
 		bool WasResized = false;
 
 		Timer InitTimer = new Timer();
+
+		List<Button> UploadButtons = new List<Button>();
 
 		public ImageForm(string fullscreenTool, string fullscreenToolArgs) : this(true, fullscreenTool, fullscreenToolArgs)
 		{
@@ -63,10 +64,7 @@ namespace EHVAG.ScreenGrabber
 			InitTimer.Interval = 16;
 			InitTimer.Enabled = true;
 
-			this.Shown += MakeFullscreen;
-
-			// this.ImageContainer.Image = CapturedImage;
-			// GenerateOverlayImage();
+			// this.Shown += MakeFullscreen;
 		}
 
 		void FullyInitialize()
@@ -79,16 +77,6 @@ namespace EHVAG.ScreenGrabber
 			this.ImageContainer.MouseDown += Handle_MouseDown;
 			this.ImageContainer.MouseMove += Handle_MouseMove;
 			this.ImageContainer.MouseUp += Handle_MouseUp;
-
-			this.UploadButton.Text = MainClass.Config[0].Name;
-			this.UploadButton.Tag = MainClass.Config[0];
-			this.UploadButton.Size = new Size(100, 30);
-			this.UploadButton.Hide();
-			this.UploadButton.KeyDown += Handle_KeyDown;
-			this.UploadButton.BackColor = Color.LightGray;
-			this.UploadButton.Click += AnyUploadButton_Click;
-
-			this.ImageContainer.Controls.Add(this.UploadButton);
 			this.ImageContainer.BackColor = Color.FromArgb(100, 230, 230, 230);
 
 			OldSelection = new Rectangle(Point.Empty, CapturedImage.Size);
@@ -133,7 +121,8 @@ namespace EHVAG.ScreenGrabber
 			Point1 = e.Location;
 
 			IsSelecting = true;
-			this.UploadButton.Hide();
+
+			RemoveUpdateButtons();
 
 			UpdateOverlay(true);
 		}
@@ -163,10 +152,7 @@ namespace EHVAG.ScreenGrabber
 
 			if (Selection.Width > 0 && Selection.Height > 0)
 			{
-				var x = (Selection.Left + Selection.Width / 2) - this.UploadButton.Width / 2;
-				var y = (Selection.Top + Selection.Height / 2) - this.UploadButton.Height / 2;
-				this.UploadButton.Location = new Point(x, y);
-				this.UploadButton.Show();
+				GenerateUpdateButtons();
 			}
 		}
 
@@ -174,29 +160,26 @@ namespace EHVAG.ScreenGrabber
 		{
 			using (var transparentBrush = new SolidBrush(Color.FromArgb(255, Color.Black)))
 			{
-				if (Selection.Width != 0 && Selection.Height != 0)
+				if (clear || true)
 				{
-					if (clear || true)
-					{
-						OverlayGraphics.Clip = new Region(OldSelection);
-						OverlayGraphics.Clear(Color.Transparent);
-						OverlayGraphics.Clip = new Region(Selection);
-						OverlayGraphics.DrawImage(CapturedImage, Selection, Selection, GraphicsUnit.Pixel);
-					}
-					else
-					{
-						// Smart redraw
-					}
-
+					OverlayGraphics.Clip = new Region(OldSelection);
+					OverlayGraphics.Clear(Color.Transparent);
 					OverlayGraphics.Clip = new Region(Selection);
-					OverlayGraphics.DrawRectangle(RedPen, Selection.Left, Selection.Top, Selection.Width - 1, Selection.Height - 1);
+					OverlayGraphics.DrawImage(CapturedImage, Selection, Selection, GraphicsUnit.Pixel);
 				}
+				else
+				{
+					// Smart redraw
+				}
+
+				OverlayGraphics.Clip = new Region(Selection);
+				OverlayGraphics.DrawRectangle(RedPen, Selection.Left, Selection.Top, Selection.Width - 1, Selection.Height - 1);
 			}
 			OldSelection = Selection;
 			this.ImageContainer.Image = OverlayImage;
 		}
 
-		private Rectangle GetCompleteBounds()
+		Rectangle GetCompleteBounds()
 		{
 			int top = int.MaxValue;
 			int left = int.MaxValue;
@@ -233,6 +216,37 @@ namespace EHVAG.ScreenGrabber
 			return res;
 		}
 
+		void GenerateUpdateButtons()
+		{
+			var currPos = new Point(Selection.X + 1, Selection.Y + 1);
+			foreach (var config in MainClass.Config)
+			{
+				var button = new Button();
+				button.Size = new Size(100, 30);
+				button.BackColor = Color.LightGray;
+				button.Location = currPos;
+				button.Text = config.Name;
+				button.Tag = config;
+				button.KeyDown += Handle_KeyDown;
+
+				button.Click += AnyUploadButton_Click;
+
+				currPos.X = button.Bounds.Right + 1;
+
+				this.UploadButtons.Add(button);
+			}
+
+			this.ImageContainer.Controls.AddRange(this.UploadButtons.ToArray());
+		}
+
+		void RemoveUpdateButtons()
+		{
+			foreach (var btn in this.UploadButtons)
+				this.ImageContainer.Controls.Remove(btn);
+
+			this.UploadButtons.Clear();
+		}
+
 		async void AnyUploadButton_Click(object sender, EventArgs e)
 		{
 			var ctrl = ((Control)sender);
@@ -250,7 +264,10 @@ namespace EHVAG.ScreenGrabber
 			img.Dispose();
 
 			ctrl.Enabled = true;
-			Clipboard.SetText(res.Link);
+
+			if (res.Link != "clipboard://")
+				MultiPlatformClipboard.SetText(res.Link);
+
 			var deleteLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ehvag_delete.log");
 			File.AppendAllText(deleteLog, res.Link + "|" + res.DeleteUrl + Environment.NewLine);
 		}
