@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Linq;
 using System.Diagnostics;
+using System.IO;
 
 namespace EHVAG.ScreenGrabber
 {
@@ -12,8 +13,8 @@ namespace EHVAG.ScreenGrabber
 		Bitmap OverlayImage;
 		Graphics OverlayGraphics;
 
+		SolidBrush WhiteBrush = new SolidBrush(Color.FromArgb(40, Color.White));
 		SolidBrush BlackBrush = new SolidBrush(Color.FromArgb(40, Color.Black));
-		SolidBrush WhiteBrush = new SolidBrush(Color.FromArgb(128, Color.White));
 		Pen RedPen = new Pen(new SolidBrush(Color.Red), 1);
 
 		Point Point1;
@@ -31,12 +32,14 @@ namespace EHVAG.ScreenGrabber
 
 		bool WasResized = false;
 
+		Timer InitTimer = new Timer();
+
 		public ImageForm(string fullscreenTool, string fullscreenToolArgs) : this(true, fullscreenTool, fullscreenToolArgs)
 		{
 			Initialize();
 		}
 
-		protected ImageForm(bool captureScreenshot, string fullscreenTool, string fullscreenToolArgs) 
+		protected ImageForm(bool captureScreenshot, string fullscreenTool, string fullscreenToolArgs)
 		{
 			if (captureScreenshot)
 				CaptureScreenshot();
@@ -48,16 +51,28 @@ namespace EHVAG.ScreenGrabber
 		protected void Initialize()
 		{
 			this.Text = "EHVAG_GLOBAL";
-
 			this.KeyDown += Handle_KeyDown;
 
 			this.WindowState = FormWindowState.Normal;
 			this.FormBorderStyle = FormBorderStyle.None;
 			this.WindowState = FormWindowState.Maximized;
 
+			this.BackColor = Color.White;
+
+			InitTimer.Tick += InitTimer_Tick;
+			InitTimer.Interval = 16;
+			InitTimer.Enabled = true;
+
+			this.Shown += MakeFullscreen;
+
+			// this.ImageContainer.Image = CapturedImage;
+			// GenerateOverlayImage();
+		}
+
+		void FullyInitialize()
+		{
 			OverlayImage = new Bitmap(CapturedImage.Width, CapturedImage.Height);
 			OverlayGraphics = Graphics.FromImage(OverlayImage);
-			OldSelection = new Rectangle(0, 0, CapturedImage.Width, CapturedImage.Height);
 
 			ImageContainer.Dock = DockStyle.Fill;
 			this.Controls.Add(ImageContainer);
@@ -65,17 +80,25 @@ namespace EHVAG.ScreenGrabber
 			this.ImageContainer.MouseMove += Handle_MouseMove;
 			this.ImageContainer.MouseUp += Handle_MouseUp;
 
-			this.UploadButton.Text = "Upload!";
+			this.UploadButton.Text = MainClass.Config[0].Name;
+			this.UploadButton.Tag = MainClass.Config[0];
 			this.UploadButton.Size = new Size(100, 30);
 			this.UploadButton.Hide();
 			this.UploadButton.KeyDown += Handle_KeyDown;
+			this.UploadButton.BackColor = Color.LightGray;
+			this.UploadButton.Click += AnyUploadButton_Click;
 
 			this.ImageContainer.Controls.Add(this.UploadButton);
-
-			this.Shown += MakeFullscreen;
+			this.ImageContainer.BackColor = Color.FromArgb(100, 230, 230, 230);
 
 			OldSelection = new Rectangle(Point.Empty, CapturedImage.Size);
-			GenerateOverlayImage();
+		}
+
+		void InitTimer_Tick(object sender, EventArgs e)
+		{
+			FullyInitialize();
+			this.BackgroundImage = CapturedImage;
+			this.InitTimer.Enabled = false;
 		}
 
 		public void MakeFullscreen(object sender, EventArgs e)
@@ -87,7 +110,7 @@ namespace EHVAG.ScreenGrabber
 			}
 		}
 
-		private void CaptureScreenshot()
+		void CaptureScreenshot()
 		{
 			this.Bounds = GetCompleteBounds();
 
@@ -107,14 +130,12 @@ namespace EHVAG.ScreenGrabber
 
 		void Handle_MouseDown(object sender, MouseEventArgs e)
 		{
-			Selection.Location = e.Location;
-			Selection.Size = Size.Empty;
 			Point1 = e.Location;
 
 			IsSelecting = true;
 			this.UploadButton.Hide();
 
-			GenerateOverlayImage();
+			UpdateOverlay(true);
 		}
 
 		void Handle_MouseMove(object sender, MouseEventArgs e)
@@ -132,15 +153,13 @@ namespace EHVAG.ScreenGrabber
 
 			Selection = new Rectangle(left, top, right - left, bottom - top);
 
-			GenerateOverlayImage();
+			UpdateOverlay(false);
 		}
 
 		void Handle_MouseUp(object sender, MouseEventArgs e)
 		{
 			Handle_MouseMove(sender, e);
 			IsSelecting = false;
-
-			GenerateOverlayImage();
 
 			if (Selection.Width > 0 && Selection.Height > 0)
 			{
@@ -151,25 +170,29 @@ namespace EHVAG.ScreenGrabber
 			}
 		}
 
-		public void GenerateOverlayImage()
+		public void UpdateOverlay(bool clear)
 		{
 			using (var transparentBrush = new SolidBrush(Color.FromArgb(255, Color.Black)))
 			{
-				if (OldSelection.Width != 0 && OldSelection.Height != 0)
-				{
-					OverlayGraphics.DrawImage(CapturedImage, OldSelection, OldSelection, GraphicsUnit.Pixel);
-				 	OverlayGraphics.FillRectangle(BlackBrush, OldSelection);
-				 	OverlayGraphics.FillRectangle(WhiteBrush, OldSelection);
-				}
-
 				if (Selection.Width != 0 && Selection.Height != 0)
 				{
-					OverlayGraphics.DrawImage(CapturedImage, Selection, Selection, GraphicsUnit.Pixel);
+					if (clear || true)
+					{
+						OverlayGraphics.Clip = new Region(OldSelection);
+						OverlayGraphics.Clear(Color.Transparent);
+						OverlayGraphics.Clip = new Region(Selection);
+						OverlayGraphics.DrawImage(CapturedImage, Selection, Selection, GraphicsUnit.Pixel);
+					}
+					else
+					{
+						// Smart redraw
+					}
+
+					OverlayGraphics.Clip = new Region(Selection);
 					OverlayGraphics.DrawRectangle(RedPen, Selection.Left, Selection.Top, Selection.Width - 1, Selection.Height - 1);
 				}
 			}
-
-				OldSelection = Selection;
+			OldSelection = Selection;
 			this.ImageContainer.Image = OverlayImage;
 		}
 
@@ -208,6 +231,28 @@ namespace EHVAG.ScreenGrabber
 			Console.WriteLine("Final Bounds: {0}:", res);
 
 			return res;
+		}
+
+		async void AnyUploadButton_Click(object sender, EventArgs e)
+		{
+			var ctrl = ((Control)sender);
+			ConfigEntry targetEntry = (ConfigEntry)(ctrl.Tag);
+			ctrl.Enabled = false;
+
+			var img = new Bitmap(Selection.Width, Selection.Height);
+			var g = Graphics.FromImage(img);
+			g.DrawImage(CapturedImage, new Rectangle(Point.Empty, img.Size), Selection, GraphicsUnit.Pixel);
+
+
+			var res = await ImageUpload.Upload(img, targetEntry);
+
+			g.Dispose();
+			img.Dispose();
+
+			ctrl.Enabled = true;
+			Clipboard.SetText(res.Link);
+			var deleteLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ehvag_delete.log");
+			File.AppendAllText(deleteLog, res.Link + "|" + res.DeleteUrl + Environment.NewLine);
 		}
 	}
 }

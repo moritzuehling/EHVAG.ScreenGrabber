@@ -1,0 +1,16 @@
+﻿[
+	{
+		Name: "Imgur",
+		Url: "https://api.imgur.com/3/image",
+		BodyFormatInfo: "base64-post|image",
+		CustomRequestHeaders: {
+			"Authorization": "Client-ID 493d66cf232857f"
+		},
+		ResponseInformation: {
+			"Type": "json",
+			"DeleteUrl": "data.deletehash",
+			"Link": "data.link",
+		},
+		MaxPngSize: 3145728,
+	}
+]
